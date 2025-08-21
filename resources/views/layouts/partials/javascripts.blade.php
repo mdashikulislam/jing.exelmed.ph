@@ -125,7 +125,7 @@
     {!! $__system_settings['additional_js'] !!}
 @endif
 @yield('javascript')
-
+@stack('script')
 @if (Module::has('Essentials'))
     @includeIf('essentials::layouts.partials.footer_part')
 @endif

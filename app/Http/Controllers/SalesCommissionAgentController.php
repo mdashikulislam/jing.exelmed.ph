@@ -150,10 +150,10 @@ class SalesCommissionAgentController extends Controller
                         $row->invoice_no .
                         "</a>";
                 })
-                ->editColumn('final_total','@format_currency($final_total)')
-                ->editColumn('total_commission','@format_currency($total_commission)')
-                ->editColumn('total_payment','@format_currency($total_payment)')
-                ->editColumn('total_balance','@format_currency($total_balance)')
+                //->editColumn('final_total','@format_currency($final_total)')
+                //->editColumn('total_commission','@format_currency($total_commission)')
+                //->editColumn('total_payment','@format_currency($total_payment)')
+                //->editColumn('total_balance','@format_currency($total_balance)')
                 ->removeColumn('id')
                 ->rawColumns(['invoice_no','action'])
                 ->make(true);
