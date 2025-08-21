@@ -19,6 +19,14 @@
     </style>
     <!-- Main content -->
     <section class="content">
+        @component('components.filters', ['title' => __('report.filters')])
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('sell_list_filter_date_range', __('report.date_range') . ':') !!}
+                    {!! Form::text('sell_list_filter_date_range', null, ['placeholder' => __('lang_v1.select_a_date_range'), 'class' => 'form-control', 'readonly']); !!}
+                </div>
+            </div>
+        @endcomponent
         @component('components.widget', ['class' => 'box-primary'])
             @can('user.create')
                 @slot('tool')
@@ -49,6 +57,18 @@
                             <th>@lang( 'messages.action' )</th>
                         </tr>
                         </thead>
+                        <tbody></tbody>
+                        <tfoot>
+                        <tr class="bg-gray font-17 footer-total text-center">
+                            <th colspan="1" class="text-right">Total:</th>
+                            <th id="total-invoice"></th>
+                            <th></th>
+                            <th id="total-commission">0.00</th>
+                            <th id="total-payment">0.00</th>
+                            <th id="total-balance" class="align-left">0.00</th>
+                            <th></th>
+                        </tr>
+                        </tfoot>
                     </table>
                 </div>
             @endcan
@@ -114,6 +134,7 @@
                             <tbody id="payment-table-body">
 
                             </tbody>
+
                         </table>
                     </div>
                     <div class="modal-footer">
@@ -150,15 +171,12 @@
             </div>
     </section>
 
-
 @endsection
-@section('javascript')
+@push('script')
     <script>
         var id = `{{$user->id}}`
         var userId = `{{$user->id}}`
         var maxPay = 0;
-       
-
         $(document).ready(function() {
             initDatePicker();
             $(document).on('click', '.view-payment', function(e) {
@@ -178,8 +196,6 @@
                     },
                 });
             });
-            
-            
             $('.select3').select2({
                 placeholder: 'Search Invoice',
                 width: '100%',
@@ -210,11 +226,9 @@
                 },
                 minimumInputLength: 1
             });
-            
+
         });
          var fullname = `{{$user->surname}} {{$user->first_name}} {{$user->last_name}}`;
-         console.log('as');
-         console.log(fullname);
         $(document).on('click','#add-invoice',function(e){
                 e.preventDefault();
                 $('.select3').empty().trigger('change');
@@ -224,7 +238,17 @@
             processing: true,
             serverSide: true,
             fixedHeader: false,
-            ajax: '/sales-commission-agents/invoice/' + id,
+            ajax:{
+                "url":'/sales-commission-agents/invoice/' + id,
+                "data": function ( d ) {
+                    if($('#sell_list_filter_date_range').val()) {
+                        var start = $('#sell_list_filter_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
+                        var end = $('#sell_list_filter_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
+                        d.start_date = start;
+                        d.end_date = end;
+                    }
+                }
+            },
             columns: [
                 { data: 'invoice_no' },
                 { data: 'final_total' },
@@ -233,6 +257,20 @@
                 { data: 'total_payment' },
                 { data: 'total_balance' },
                 { data: 'action' },
+            ],
+            columnDefs:[
+                {
+                    targets:[1,3],
+                    render: function (data, type, row, meta) {
+                        return __currency_trans_from_en(data);
+                    }
+                },
+                {
+                    targets:[4,5],
+                    render: function (data, type, row, meta) {
+                        return __currency_trans_from_en(data);
+                    }
+                }
             ],
             dom: '<"datatable-header flex justify-between items-center mb-2"<"left-section"l><"right-section"Bf>>rt<"bottom"ip>',
             buttons: [
@@ -245,7 +283,17 @@
                         columns: ':visible:not(:last-child)'
                     }
                 }
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                const  totalCommission = data.reduce((sum, item) => sum + parseFloat(item.total_commission || 0), 0);
+                const totalPayment = data.reduce((sum, item) => sum + parseFloat(item.total_payment || 0), 0);
+                const totalBalance = data.reduce((sum, item) => sum + parseFloat(item.total_balance || 0), 0);
+                const totalInvoice = data.reduce((sum, item) => sum + parseFloat(item.final_total || 0), 0);
+                $('#total-commission').text(__currency_trans_from_en(totalCommission.toFixed(2)));
+                $('#total-payment').text(__currency_trans_from_en(totalPayment.toFixed(2)));
+                $('#total-balance').text(__currency_trans_from_en(totalBalance.toFixed(2)));
+                $('#total-invoice').text(__currency_trans_from_en(totalInvoice.toFixed(2)));
+            }
         });
         $('div#add-invoice-modal').on('shown.bs.modal', function(e) {
                 $('form#add-invoice-form')
@@ -429,7 +477,7 @@
                     },
                 });
         });
-        
+
         $(document).on('click','.delete',function(e){
            e.preventDefault();
             swal({
@@ -593,5 +641,18 @@
             var url = '/print-payment/' + id + '?user_id=' + `{{$user->id}}`;
             window.open(url, '_blank');
         });
+
+        $('#sell_list_filter_date_range').daterangepicker(
+            dateRangeSettings,
+            function (start, end) {
+                $('#sell_list_filter_date_range').val(start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format));
+                sales_commission_agent_table.ajax.reload();
+            }
+        );
+        $('#sell_list_filter_date_range').on('cancel.daterangepicker', function(ev, picker) {
+            $('#sell_list_filter_date_range').val('');
+            sales_commission_agent_table.ajax.reload();
+        });
+
     </script>
-@endsection
+@endpush
