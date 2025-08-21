@@ -109,6 +109,12 @@ class SalesCommissionAgentController extends Controller
             $transactions = Transaction::withSum('commissionPayments','amount')
                 ->where('business_id', $business_id)
                 ->where('commission_agent', $id);
+            if (! empty(request()->start_date) && ! empty(request()->end_date)) {
+                $start = request()->start_date;
+                $end = request()->end_date;
+                $transactions->whereDate('transaction_date', '>=', $start)
+                    ->whereDate('transaction_date', '<=', $end);
+            }
             return Datatables::of($transactions)
                 ->addColumn('total_commission',function ($query) use($total_commission_percent){
                     $total_commission_percent = (float)$query->sales_commission_percentage > 0 ? (float)$query->sales_commission_percentage:$total_commission_percent;

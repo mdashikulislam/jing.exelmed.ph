@@ -19,6 +19,14 @@
     </style>
     <!-- Main content -->
     <section class="content">
+        @component('components.filters', ['title' => __('report.filters')])
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('sell_list_filter_date_range', __('report.date_range') . ':') !!}
+                    {!! Form::text('sell_list_filter_date_range', null, ['placeholder' => __('lang_v1.select_a_date_range'), 'class' => 'form-control', 'readonly']); !!}
+                </div>
+            </div>
+        @endcomponent
         @component('components.widget', ['class' => 'box-primary'])
             @can('user.create')
                 @slot('tool')
@@ -230,7 +238,17 @@
             processing: true,
             serverSide: true,
             fixedHeader: false,
-            ajax:'/sales-commission-agents/invoice/' + id,
+            ajax:{
+                "url":'/sales-commission-agents/invoice/' + id,
+                "data": function ( d ) {
+                    if($('#sell_list_filter_date_range').val()) {
+                        var start = $('#sell_list_filter_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
+                        var end = $('#sell_list_filter_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
+                        d.start_date = start;
+                        d.end_date = end;
+                    }
+                }
+            },
             columns: [
                 { data: 'invoice_no' },
                 { data: 'final_total' },
@@ -623,5 +641,18 @@
             var url = '/print-payment/' + id + '?user_id=' + `{{$user->id}}`;
             window.open(url, '_blank');
         });
+
+        $('#sell_list_filter_date_range').daterangepicker(
+            dateRangeSettings,
+            function (start, end) {
+                $('#sell_list_filter_date_range').val(start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format));
+                sales_commission_agent_table.ajax.reload();
+            }
+        );
+        $('#sell_list_filter_date_range').on('cancel.daterangepicker', function(ev, picker) {
+            $('#sell_list_filter_date_range').val('');
+            sales_commission_agent_table.ajax.reload();
+        });
+
     </script>
 @endpush
